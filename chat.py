@@ -2,8 +2,14 @@
 
 import streamlit as st
 from openai import OpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL
 from components.header import show_header
+
+# secrets.toml에서 환경설정 읽기
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_MODEL = st.secrets["OPENAI_MODEL"]
+DEFAULT_TEMPERATURE = st.secrets.get("DEFAULT_TEMPERATURE", 0.5)
+DEFAULT_TOP_P = st.secrets.get("DEFAULT_TOP_P", 1.0)
+DEFAULT_MAX_TOKENS = st.secrets.get("DEFAULT_MAX_TOKENS", 300)
 
 # OpenAI 클라이언트 생성
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -52,22 +58,18 @@ def handle_user_input(user_input):
 
     # 2. GPT 호출로 에이전트 답변 생성
     if substep == 1:
-        # 1차 답변 후 추가 질문 생성
         assistant_reply = generate_follow_up_question(step)
         with st.chat_message("assistant"):
             st.markdown(assistant_reply)
         st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
-
         st.session_state.substep = 2
 
     elif substep == 2:
-        # 2차 답변 후 다리 멘트 생성
         bridge_reply = generate_bridge_message(step)
         with st.chat_message("assistant"):
             st.markdown(bridge_reply)
         st.session_state.messages.append({"role": "assistant", "content": bridge_reply})
 
-        # 만약 전략 스텝이면 바로 전략 답변 생성
         if step in [3, 4, 5, 6, 7, 8, 9]:
             final_reply = generate_step_response(step)
             with st.chat_message("assistant"):
@@ -175,8 +177,9 @@ def call_gpt_with_context(system_prompt):
     response = client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=messages,
-        temperature=0.7,
-        max_tokens=500,
+        temperature=DEFAULT_TEMPERATURE,
+        top_p=DEFAULT_TOP_P,
+        max_tokens=DEFAULT_MAX_TOKENS,
     )
     return response.choices[0].message.content.strip()
 
